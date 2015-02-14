@@ -8,6 +8,7 @@ install_requires = [
         ]
 
 extras_require = {
+        'gpu': ['pycuda'],
         'plot': ['matplotlib'],
         }
 

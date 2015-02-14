@@ -2,16 +2,23 @@
 Real-time correlation.
 """
 
+from . import gpu
+
+if gpu.is_enabled():
+    from pycuda.compiler import SourceModule
+    from pycuda import gpuarray
+
 import numpy as N
 
 from warnings import warn
 
 from .constants import HBAR
+from .gpu import carve_array
 from .semiclassical import SemiclassicalTrajectory
 from .tools import meshgrid
 
 
-class SurvivalAmplitude:
+class _SurvivalAmplitude:
     """
     Calculate survival amplitude of the ground state using Herman-Kluk SC-IVR.
     """
@@ -67,11 +74,16 @@ class SurvivalAmplitude:
         # normalization of wf.
         self._C = dp * dq * dq * N.sqrt(self._gamma / N.pi) / (2. * N.pi * HBAR) # 1
 
-        mesh_ps, mesh_qs = meshgrid(p_grid, self._q_grid)
+        self._init(p_grid_len, len(self._q_grid))
+
+        mesh_ps, mesh_qs = meshgrid(p_grid, self._q_grid, sparse=False)
         self._trajs = SemiclassicalTrajectory(self._gamma, mass, dt, potential_fs, mesh_ps, mesh_qs)
         self._transformed_wf0 = self._transform_wf(mesh_ps, mesh_qs).conj() # 1
 
-    def _transform_wf(self, ps, qs) -> '1':
+    def _init(self, pn, qn):
+        pass
+
+    def _transform_wf(self, ps, qs):
         """
         Perform one of the position integrals.
 
@@ -88,7 +100,7 @@ class SurvivalAmplitude:
 
         return result
 
-    def __iter__(self) -> 'SurvivalAmplitude':
+    def __iter__(self) -> '_SurvivalAmplitude':
         return self
 
     def __next__(self) -> '(ps, 1)':
@@ -103,3 +115,55 @@ class SurvivalAmplitude:
 
         # Perform the final integrals over p and q.
         return t, self._C * N.sum(consts * transformed_wf * self._transformed_wf0)
+
+class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
+    def _init(self, pn, qn):
+        super()._init(pn, qn)
+
+        self._q_grid_gpu = gpuarray.to_gpu(N.ascontiguousarray(self._q_grid))
+        self._wf_gpu = gpuarray.to_gpu(N.ascontiguousarray(self._wf))
+
+        mod = SourceModule("""
+            __global__ void transform(double *ps, double *qs, double *q_grid, double *wf, double *out_real, double *out_imag) {{
+                int idx_x = threadIdx.x + blockIdx.x * blockDim.x;
+                int idx_y = threadIdx.y + blockIdx.y * blockDim.y;
+                int idx = idx_x + idx_y * {qn};
+                double qdiff, prefactor, s, c;
+
+                if (idx_x >= {qn} || idx_y >= {pn})
+                    return;
+
+                for (int j = 0; j < {qn}; j++) {{
+                    qdiff = q_grid[j] - qs[idx];
+                    prefactor = exp({g} * qdiff * qdiff) * wf[j];
+                    sincos({h} * ps[idx] * qdiff, &s, &c);
+
+                    out_real[idx] += prefactor * c;
+                    out_imag[idx] += prefactor * s;
+                }}
+            }}
+        """.format(g=-0.5*self._gamma, h=1./HBAR, pn=pn, qn=qn))
+        self._kernel = mod.get_function('transform')
+        self._kernel.prepare('PPPPPP')
+
+        self._gpu_grid, self._gpu_block = carve_array(qn, pn)
+
+    def _transform_wf(self, ps, qs):
+        result_real_gpu = gpuarray.zeros(N.broadcast(ps, qs).shape, N.double)
+        result_imag_gpu = gpuarray.zeros_like(result_real_gpu)
+
+        self._kernel.prepared_call(self._gpu_grid, self._gpu_block,
+                gpuarray.to_gpu(N.ascontiguousarray(ps)).gpudata,
+                gpuarray.to_gpu(N.ascontiguousarray(qs)).gpudata,
+                self._q_grid_gpu.gpudata,
+                self._wf_gpu.gpudata,
+                result_real_gpu.gpudata,
+                result_imag_gpu.gpudata,
+                )
+
+        return result_real_gpu.get() + 1j * result_imag_gpu.get()
+
+if gpu.is_enabled():
+    SurvivalAmplitude = _SurvivalAmplitudeGPU
+else:
+    SurvivalAmplitude = _SurvivalAmplitude

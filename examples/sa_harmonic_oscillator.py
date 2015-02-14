@@ -13,10 +13,6 @@ from argparse import ArgumentParser, FileType
 
 import numpy as N
 
-from realtimepork.constants import KB, HBAR, ME
-from realtimepork.correlation import SurvivalAmplitude
-from realtimepork.potentials import harmonic
-
 
 # Parse arguments.
 p = ArgumentParser(description='Calculate the HO ground state survival amplitude.')
@@ -31,10 +27,31 @@ p_config.add_argument('--dt', metavar='T', type=float, required=True, help='spac
 p_config.add_argument('--steps', metavar='N', type=int, required=True, help='number of real-time steps')
 p_config.add_argument('--wf-in', metavar='FILE', required=True, help='path to wavefunction')
 
+p.add_argument('--gpu', dest='gpu', action='store_true', help='use the GPU')
+p.add_argument('--no-gpu', dest='gpu', action='store_false', help="don't use the GPU (default)")
+
 p.add_argument('--sas-out', metavar='FILE', type=FileType('w'), help='path to output values (- for stdout)')
 p.add_argument('--sas-plot-out', metavar='FILE', help='path to output survival amplitude plot')
 
 args = p.parse_args()
+
+
+# Import now that we know whether to use the GPU.
+if args.gpu:
+    from realtimepork import gpu
+
+    try:
+        gpu.enable()
+    except gpu.PyCUDAMissingError:
+        from sys import exit
+
+        print('Cannot load PyCUDA for --gpu option!')
+        exit(1)
+
+from realtimepork.constants import KB, HBAR, ME
+from realtimepork.correlation import SurvivalAmplitude
+from realtimepork.potentials import harmonic
+
 
 mass = args.mass * ME # g/mol
 omega = args.omega * KB / HBAR # 1/ps
