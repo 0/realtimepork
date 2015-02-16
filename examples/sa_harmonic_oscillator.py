@@ -32,6 +32,7 @@ p.add_argument('--no-gpu', dest='gpu', action='store_false', help="don't use the
 
 p.add_argument('--sas-out', metavar='FILE', type=FileType('w'), help='path to output values (- for stdout)')
 p.add_argument('--sas-plot-out', metavar='FILE', help='path to output survival amplitude plot')
+p.add_argument('--sas-spectrum-out', metavar='FILE', help='path to output spectrum plot')
 
 args = p.parse_args()
 
@@ -51,6 +52,7 @@ if args.gpu:
 from realtimepork.constants import KB, HBAR, ME
 from realtimepork.correlation import SurvivalAmplitude
 from realtimepork.potentials import harmonic
+from realtimepork.spectrum import find_peak, interpolate, transform
 
 
 mass = args.mass * ME # g/mol
@@ -64,6 +66,7 @@ wf_in = args.wf_in
 
 sas_out = args.sas_out
 sas_plot_out = args.sas_plot_out
+sas_spectrum_out = args.sas_spectrum_out
 
 
 # Calculate values.
@@ -86,8 +89,23 @@ for i, (t, amp) in enumerate(sa_gen):
         print('{} {}'.format(ts[i], sas[i]), file=sas_out)
 
 
-# Output plot.
+# Obtain the spectrum.
+freqs, amps = transform(ts, sas) # 1/ps, 1
+freqs *= 2. * N.pi * HBAR / KB # K
+peak_idx, _ = find_peak(freqs, amps)
+freq_window = freqs[peak_idx - 3], freqs[peak_idx + 4]
+freqs_interp, amps_interp = interpolate(sas, freqs, amps, freq_window, 64) # K, 1
+
+print('Peak at {} K.'.format(find_peak(freqs_interp, amps_interp)[1]))
+
+
+# Output plots.
 if sas_plot_out:
     from realtimepork.plotting import plot_sa
 
     plot_sa(ts, sas, sas_plot_out, x_label='$t / \mathrm{ps}$', y_label='$S_0(t)$')
+
+if sas_spectrum_out:
+    from realtimepork.plotting import plot_spectrum
+
+    plot_spectrum(freqs_interp, amps_interp, sas_spectrum_out, magnitude=True, freq_window=freq_window, x_label='$\omega / \mathrm{K}$', y_label='$I(\omega)$')
