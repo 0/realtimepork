@@ -135,7 +135,8 @@ class RuthForest(ClassicalIntegrator):
         self._last_fs = fs
 
 
-# This integrator is only used for comparison in testing.
+# This integrator is only used for comparison in testing and as a model for the
+# specialized integrator (RungeKutta4HermanKluk).
 class RungeKutta4(ClassicalIntegrator):
     """
     Fourth-order Runge-Kutta integrator.

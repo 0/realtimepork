@@ -31,7 +31,7 @@ class ClassicalIntegratorTest:
         for i, step in enumerate(integrator):
             _, calculated_ps[i], calculated_qs[i] = step
 
-        expected_ps, expected_qs, _ = harmonic_trajectory(hp['mass'], hp['omega'], ts, init_ps, init_qs)
+        expected_ps, expected_qs, _, _ = harmonic_trajectory(hp['mass'], hp['omega'], None, ts, init_ps, init_qs)
 
         assert_array_almost_equal(calculated_ps, expected_ps)
         assert_array_almost_equal(calculated_qs, expected_qs)
@@ -113,7 +113,7 @@ class TrajectoryActionTest(TestCase):
             _, ps, _ = step2
             calculated_Ss[i] = action.step(ps)
 
-        _, _, expected_Ss = harmonic_trajectory(hp['mass'], hp['omega'], ts, init_ps, init_qs)
+        _, _, _, expected_Ss = harmonic_trajectory(hp['mass'], hp['omega'], None, ts, init_ps, init_qs)
 
         assert_array_almost_equal(calculated_Ss, expected_Ss)
 
