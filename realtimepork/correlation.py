@@ -18,10 +18,20 @@ from .semiclassical import SemiclassicalTrajectory
 from .tools import meshgrid
 
 
+class ThresholdExceededError(Exception):
+    def __init__(self, t, sa):
+        self.t = t
+        self.sa = sa
+
+
 class _SurvivalAmplitude:
     """
     Calculate survival amplitude of the ground state using Herman-Kluk SC-IVR.
     """
+
+    # Amplitude after which we assume we've broken down entirely and there's no
+    # sense whatsoever in carrying on.
+    ABORT_THRESHOLD = 5.
 
     def __init__(self, gamma, mass, dt, potential_fs, dp, q_grid, wf, p_max=None, max_steps=None):
         """
@@ -114,7 +124,12 @@ class _SurvivalAmplitude:
         transformed_wf = self._transform_wf(ps, qs) # 1
 
         # Perform the final integrals over p and q.
-        return t, self._C * N.sum(consts * transformed_wf * self._transformed_wf0)
+        sa = self._C * N.sum(consts * transformed_wf * self._transformed_wf0)
+
+        if abs(sa) >= self.ABORT_THRESHOLD:
+            raise ThresholdExceededError(t, sa)
+
+        return t, sa
 
 class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
     def _init(self, pn, qn):
