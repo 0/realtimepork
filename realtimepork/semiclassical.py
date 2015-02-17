@@ -163,6 +163,9 @@ class SemiclassicalTrajectory:
 
         self._cur_step = 0
 
+        # Hold the positions for hand-off to the HermanKlukPrefactor.
+        self._q_container = N.empty((3,) + shape)
+
     def __iter__(self) -> 'SemiclassicalTrajectory':
         return self
 
@@ -172,14 +175,14 @@ class SemiclassicalTrajectory:
 
         self._cur_step += 1
 
-        t, p1, q1 = next(self._classical_integrator)
-        _, p2, q2 = next(self._classical_integrator)
+        t, p1, self._q_container[0] = next(self._classical_integrator)
+        _, p2, self._q_container[1] = next(self._classical_integrator)
         # The integrator has already stepped to the last time, but we don't
         # want it to move anymore until our next step, so we just ask it for
         # the position.
-        q3 = self._classical_integrator.qs
+        self._q_container[2] = self._classical_integrator.qs
 
         S = self._classical_action.step(p2)
-        R = self._hk_prefactor.step(N.array([q1, q2, q3]))
+        R = self._hk_prefactor.step(self._q_container)
 
-        return t, p1, q1, R, S
+        return t, p1, self._q_container[0], R, S
