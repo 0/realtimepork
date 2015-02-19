@@ -60,7 +60,22 @@ class _SurvivalAmplitude:
         self._max_steps = max_steps
 
         dq = self._q_grid[1] - self._q_grid[0] # nm
+        p_grid = self._make_p_grid(dp, dq, p_max) # g nm/ps mol
 
+        self._cur_step = 0
+
+        # One fewer dq than there are position grid integrations due to the
+        # normalization of wf.
+        self._C = dp * dq * dq * N.sqrt(self._gamma / N.pi) / (2. * N.pi * HBAR) # 1
+
+        self._init(len(p_grid), len(self._q_grid))
+
+        mesh_ps, mesh_qs = meshgrid(p_grid, self._q_grid, sparse=False)
+        self._trajs = SemiclassicalTrajectory(self._gamma, mass, dt, potential_fs, mesh_ps, mesh_qs)
+        self._transformed_wf0 = self._transform_wf(mesh_ps, mesh_qs).conj() # 1
+
+    @staticmethod
+    def _make_p_grid(dp, dq, p_max):
         # Use the Nyquist frequency relation to obtain the maximum allowed
         # value for the momentum grid.
         p_max_max = N.pi * HBAR / dq # g nm/ps mol
@@ -76,19 +91,7 @@ class _SurvivalAmplitude:
         # p_max_max).
         p_grid_len = 2 * int(p_max_max / dp) + 1
         p_max = dp * (p_grid_len - 1) / 2 # g nm/ps mol
-        p_grid = N.linspace(-p_max, p_max, p_grid_len) # g nm/ps mol
-
-        self._cur_step = 0
-
-        # One fewer dq than there are position grid integrations due to the
-        # normalization of wf.
-        self._C = dp * dq * dq * N.sqrt(self._gamma / N.pi) / (2. * N.pi * HBAR) # 1
-
-        self._init(p_grid_len, len(self._q_grid))
-
-        mesh_ps, mesh_qs = meshgrid(p_grid, self._q_grid, sparse=False)
-        self._trajs = SemiclassicalTrajectory(self._gamma, mass, dt, potential_fs, mesh_ps, mesh_qs)
-        self._transformed_wf0 = self._transform_wf(mesh_ps, mesh_qs).conj() # 1
+        return N.linspace(-p_max, p_max, p_grid_len) # g nm/ps mol
 
     def _init(self, pn, qn):
         pass
