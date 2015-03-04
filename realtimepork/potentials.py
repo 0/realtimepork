@@ -58,6 +58,32 @@ def harmonic(k=None, m=None, omega=None):
     return potential_f, force_f, hessian_f
 
 
+def quartic(a, b, c):
+    """
+    Quartic potential of the form a x^2 + b x^3 + c x^4.
+
+    Parameters:
+      a: (kJ/nm^2 mol).
+      b: (kJ/nm^3 mol).
+      c: (kJ/nm^4 mol).
+    """
+
+    def potential_f(q) -> 'kJ/mol':
+        q2 = q * q # nm^2
+
+        return (a + b * q + c * q2) * q2
+
+    def force_f(q) -> 'kJ/nm mol':
+        q2 = q * q # nm^2
+
+        return (-2. * a - 3. * b * q - 4. * c * q2) * q
+
+    def hessian_f(q) -> 'kJ/nm^2 mol':
+        return 2. * a + 6. * (b + 2. * c * q) * q
+
+    return potential_f, force_f, hessian_f
+
+
 def double_well(depth, width):
     """
     Double well potential.
