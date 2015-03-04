@@ -10,8 +10,6 @@ if gpu.is_enabled():
 
 import numpy as N
 
-from warnings import warn
-
 from .constants import HBAR
 from .gpu import carve_array
 from .semiclassical import SemiclassicalTrajectory
@@ -33,7 +31,7 @@ class _SurvivalAmplitude:
     # sense whatsoever in carrying on.
     ABORT_THRESHOLD = 5.
 
-    def __init__(self, gamma, mass, dt, potential_fs, dp, q_grid, wf, p_max=None, max_steps=None):
+    def __init__(self, gamma, mass, dt, potential_fs, q_grid, wf, max_steps=None):
         """
         Parameters:
           gamma: Coherent state width (1/nm^2).
@@ -41,10 +39,8 @@ class _SurvivalAmplitude:
           dt: Time step (ps).
           potential_fs: Tuple of functions describing the potential
                         (nm -> kJ/mol, nm -> kJ/nm mol, nm -> kJ/nm^2 mol).
-          dp: Spacing of momentum grid (g nm/ps mol).
           q_grid: Evenly spaced grid of position points (nm).
           wf: Ground state wavefunction evaluated on the position grid.
-          p_max: Range of momentum grid (g nm/ps mol).
           max_steps: Number of steps after which to terminate.
         """
 
@@ -60,7 +56,8 @@ class _SurvivalAmplitude:
         self._max_steps = max_steps
 
         dq = self._q_grid[1] - self._q_grid[0] # nm
-        p_grid = self._make_p_grid(dp, dq, p_max) # g nm/ps mol
+        p_grid = 0.5 * self._q_grid * N.pi * HBAR / (self._q_grid[-1] * dq) # g nm/ps mol
+        dp = p_grid[1] - p_grid[0] # g nm/ps mol
 
         self._cur_step = 0
 
@@ -73,25 +70,6 @@ class _SurvivalAmplitude:
         mesh_ps, mesh_qs = meshgrid(p_grid, self._q_grid, sparse=False)
         self._trajs = SemiclassicalTrajectory(self._gamma, mass, dt, potential_fs, mesh_ps, mesh_qs)
         self._transformed_wf0 = self._transform_wf(mesh_ps, mesh_qs).conj() # 1
-
-    @staticmethod
-    def _make_p_grid(dp, dq, p_max):
-        # Use the Nyquist frequency relation to obtain the maximum allowed
-        # value for the momentum grid.
-        p_max_max = N.pi * HBAR / dq # g nm/ps mol
-
-        if p_max is not None:
-            if p_max > p_max_max:
-                warn('Given p_max ({}) exceeds recommended maximum ({}).'.format(p_max, p_max_max))
-
-            # Always use the given value if there is one.
-            p_max_max = p_max
-
-        # Rounding down to err on the side of caution (we shouldn't exceed
-        # p_max_max).
-        p_grid_len = 2 * int(p_max_max / dp) + 1
-        p_max = dp * (p_grid_len - 1) / 2 # g nm/ps mol
-        return N.linspace(-p_max, p_max, p_grid_len) # g nm/ps mol
 
     def _init(self, pn, qn):
         pass

@@ -15,8 +15,6 @@ p = ArgumentParser(description='Calculate the HO ground state survival amplitude
 p_config = p.add_argument_group('configuration')
 
 p_config.add_argument('--gamma', metavar='G', type=float, required=True, help='coherent state width (1/nm^2)')
-p_config.add_argument('--dp', metavar='P', type=float, required=True, help='spacing of momentum grid (g nm/ps mol)')
-p_config.add_argument('--p-max', metavar='P', type=float, help='range of momentum grid (g nm/ps mol)')
 p_config.add_argument('--dt', metavar='T', type=float, required=True, help='spacing of time grid (ps)')
 p_config.add_argument('--steps', metavar='N', type=int, required=True, help='number of real-time steps')
 p_config.add_argument('--wfs-in', metavar='FILE', required=True, help='path to wavefunctions')
@@ -50,8 +48,6 @@ from realtimepork.spectrum import find_peak, interpolate, transform
 
 
 gamma = args.gamma # 1/nm^2
-dp = args.dp # g nm/ps mol
-p_max = args.p_max # g nm/ps mol
 dt = args.dt # ps
 steps = args.steps # 1
 wfs_in = args.wfs_in
@@ -68,7 +64,7 @@ qs = wfs_in_data[:,0] # nm
 wfs = wfs_in_data[:,1:].T
 energies = N.loadtxt(energies_in, ndmin=1) * KB # kJ/mol
 
-sa_gen = SurvivalAmplitude(gamma, dt, dp, qs, wfs, energies, p_max=p_max, max_steps=steps)
+sa_gen = SurvivalAmplitude(gamma, dt, qs, wfs, energies, max_steps=steps)
 ts = N.empty(steps)
 sas = N.empty(steps, dtype=complex)
 

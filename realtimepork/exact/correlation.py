@@ -22,16 +22,14 @@ class _SurvivalAmplitude(_SAHK):
     expressed as a truncated sum-over-states.
     """
 
-    def __init__(self, gamma, dt, dp, q_grid, wfs, energies, p_max=None, max_steps=None):
+    def __init__(self, gamma, dt, q_grid, wfs, energies, max_steps=None):
         """
         Parameters:
           gamma: Coherent state width (1/nm^2).
           dt: Time step (ps).
-          dp: Spacing of momentum grid (g nm/ps mol).
           q_grid: Evenly spaced grid of position points (nm).
           wfs: Lowest-energy wavefunctions evaluated on the position grid.
           energies: Energies corresponding to wfs (kJ/mol).
-          p_max: Range of momentum grid (g nm/ps mol).
           max_steps: Number of steps after which to terminate.
         """
 
@@ -49,7 +47,8 @@ class _SurvivalAmplitude(_SAHK):
         self._max_steps = max_steps
 
         dq = self._q_grid[1] - self._q_grid[0] # nm
-        self._p_grid = self._make_p_grid(dp, dq, p_max) # g nm/ps mol
+        self._p_grid = self._q_grid * N.pi * HBAR / (self._q_grid[-1] * dq) # g nm/ps mol
+        dp = self._p_grid[1] - self._p_grid[0] # g nm/ps mol
 
         self._t = 0. # ps
         self._cur_step = 0

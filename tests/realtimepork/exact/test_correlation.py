@@ -19,8 +19,7 @@ class SurvivalAmplitudeTest(TestCase):
         # trajectory integrators.
         dt = 12.34 * N.pi / hp['omega'] # ps
         num_steps = 3
-        dp = 0.004 # g nm/ps mol
-        qs = N.linspace(-150., 150., 76) # nm
+        qs = N.linspace(-150., 150., 55) # nm
         # Exact (unnormalized) harmonic oscillator wavefunctions.
         wfn = 3
         herms = N.polynomial.hermite.hermval(N.sqrt(hp['mass'] * hp['omega'] / HBAR) * qs, N.eye(wfn))
@@ -28,7 +27,7 @@ class SurvivalAmplitudeTest(TestCase):
         wfs = herms * exps
         energies = HBAR * hp['omega'] * (0.5 + N.arange(wfn)) # kJ/mol
 
-        sa_gen = SurvivalAmplitude(hp['gamma'], dt, dp, qs, wfs, energies, max_steps=num_steps)
+        sa_gen = SurvivalAmplitude(hp['gamma'], dt, qs, wfs, energies, max_steps=num_steps)
         ts = N.empty(num_steps) # ps
         sas = N.empty(num_steps, dtype=complex) # 1
 
