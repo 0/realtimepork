@@ -7,6 +7,10 @@ install_requires = [
         'numpy',
         ]
 
+extras_require = {
+        'plot': ['matplotlib'],
+        }
+
 tests_require = [
         'nose',
         ]
@@ -27,6 +31,7 @@ setup(
             'Programming Language :: Python :: 3',
             ],
         install_requires=install_requires,
+        extras_require=extras_require,
         tests_require=tests_require,
         packages=find_packages(exclude=['tests', 'tests.*']),
         test_suite='nose.collector',
