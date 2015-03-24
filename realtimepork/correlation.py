@@ -31,7 +31,7 @@ class _SurvivalAmplitude:
     # sense whatsoever in carrying on.
     ABORT_THRESHOLD = 5.
 
-    def __init__(self, gamma, mass, dt, potential_fs, q_grid, wf, max_steps=None):
+    def __init__(self, gamma, mass, dt, potential_fs, q_grid, wf_q_grid, wf, max_steps=None):
         """
         Parameters:
           gamma: Coherent state width (1/nm^2).
@@ -40,38 +40,42 @@ class _SurvivalAmplitude:
           potential_fs: Tuple of functions describing the potential
                         (nm -> kJ/mol, nm -> kJ/nm mol, nm -> kJ/nm^2 mol).
           q_grid: Evenly spaced grid of position points (nm).
-          wf: Ground state wavefunction evaluated on the position grid.
+          wf_q_grid: Evenly spaced grid of position points for the wavefunction
+                     (nm).
+          wf: Ground state wavefunction evaluated on wf_q_grid.
           max_steps: Number of steps after which to terminate.
         """
 
         assert len(q_grid) > 1, 'More than one position grid point required.'
-        assert len(wf) == len(q_grid), 'Wavefunction is not on position grid.'
+        assert len(wf_q_grid) > 1, 'More than one position grid point required.'
+        assert len(wf) == len(wf_q_grid), 'Wavefunction is not on position grid.'
 
         # Normalize the wavefunction the way we require (with the square root
         # of the volume element included in the wavefunction).
         self._wf = wf / N.sqrt(N.sum(wf * wf)) # 1
 
         self._gamma = gamma # 1/nm^2
-        self._q_grid = q_grid # nm
+        self._wf_q_grid = wf_q_grid # nm
         self._max_steps = max_steps
 
-        dq = self._q_grid[1] - self._q_grid[0] # nm
-        p_grid = 0.5 * self._q_grid * N.pi * HBAR / (self._q_grid[-1] * dq) # g nm/ps mol
+        dq = q_grid[1] - q_grid[0] # nm
+        wf_dq = self._wf_q_grid[1] - self._wf_q_grid[0] # nm
+        p_grid = 0.5 * q_grid * N.pi * HBAR / (q_grid[-1] * dq) # g nm/ps mol
         dp = p_grid[1] - p_grid[0] # g nm/ps mol
 
         self._cur_step = 0
 
-        # One fewer dq than there are position grid integrations due to the
+        # One fewer wf_dq than there are position grid integrations due to the
         # normalization of wf.
-        self._C = dp * dq * dq * N.sqrt(self._gamma / N.pi) / (2. * N.pi * HBAR) # 1
+        self._C = dp * dq * wf_dq * N.sqrt(self._gamma / N.pi) / (2. * N.pi * HBAR) # 1
 
-        self._init(len(p_grid), len(self._q_grid))
+        self._init(len(p_grid), len(q_grid), len(self._wf_q_grid))
 
-        mesh_ps, mesh_qs = meshgrid(p_grid, self._q_grid, sparse=False)
+        mesh_ps, mesh_qs = meshgrid(p_grid, q_grid, sparse=False)
         self._trajs = SemiclassicalTrajectory(self._gamma, mass, dt, potential_fs, mesh_ps, mesh_qs)
         self._transformed_wf0 = self._transform_wf(mesh_ps, mesh_qs).conj() # 1
 
-    def _init(self, pn, qn):
+    def _init(self, pn, qn, wf_qn):
         pass
 
     def _transform_wf(self, ps, qs):
@@ -85,7 +89,7 @@ class _SurvivalAmplitude:
 
         result = N.zeros(N.broadcast(ps, qs).shape, dtype=complex) # 1
 
-        for q_j, wf_j in zip(self._q_grid, self._wf):
+        for q_j, wf_j in zip(self._wf_q_grid, self._wf):
             qdiff = q_j - qs # nm
             result += N.exp(-0.5 * self._gamma * qdiff * qdiff + 1j / HBAR * ps * qdiff) * wf_j
 
@@ -113,14 +117,14 @@ class _SurvivalAmplitude:
         return t, sa
 
 class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
-    def _init(self, pn, qn):
-        super()._init(pn, qn)
+    def _init(self, pn, qn, wf_qn):
+        super()._init(pn, qn, wf_qn)
 
-        self._q_grid_gpu = gpuarray.to_gpu(N.ascontiguousarray(self._q_grid))
+        self._wf_q_grid_gpu = gpuarray.to_gpu(N.ascontiguousarray(self._wf_q_grid))
         self._wf_gpu = gpuarray.to_gpu(N.ascontiguousarray(self._wf))
 
         mod = SourceModule("""
-            __global__ void transform(double *ps, double *qs, double *q_grid, double *wf, double *out_real, double *out_imag) {{
+            __global__ void transform(double *ps, double *qs, double *wf_q_grid, double *wf, double *out_real, double *out_imag) {{
                 int idx_x = threadIdx.x + blockIdx.x * blockDim.x;
                 int idx_y = threadIdx.y + blockIdx.y * blockDim.y;
                 int idx = idx_x + idx_y * {qn};
@@ -129,8 +133,8 @@ class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
                 if (idx_x >= {qn} || idx_y >= {pn})
                     return;
 
-                for (int j = 0; j < {qn}; j++) {{
-                    qdiff = q_grid[j] - qs[idx];
+                for (int j = 0; j < {wf_qn}; j++) {{
+                    qdiff = wf_q_grid[j] - qs[idx];
                     prefactor = exp({g} * qdiff * qdiff) * wf[j];
                     sincos({h} * ps[idx] * qdiff, &s, &c);
 
@@ -138,7 +142,7 @@ class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
                     out_imag[idx] += prefactor * s;
                 }}
             }}
-        """.format(g=-0.5*self._gamma, h=1./HBAR, pn=pn, qn=qn))
+        """.format(g=-0.5*self._gamma, h=1./HBAR, pn=pn, qn=qn, wf_qn=wf_qn))
         self._kernel = mod.get_function('transform')
         self._kernel.prepare('PPPPPP')
 
@@ -151,7 +155,7 @@ class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
         self._kernel.prepared_call(self._gpu_grid, self._gpu_block,
                 gpuarray.to_gpu(N.ascontiguousarray(ps)).gpudata,
                 gpuarray.to_gpu(N.ascontiguousarray(qs)).gpudata,
-                self._q_grid_gpu.gpudata,
+                self._wf_q_grid_gpu.gpudata,
                 self._wf_gpu.gpudata,
                 result_real_gpu.gpudata,
                 result_imag_gpu.gpudata,

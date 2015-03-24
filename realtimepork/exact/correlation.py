@@ -22,19 +22,22 @@ class _SurvivalAmplitude(_SAHK):
     expressed as a truncated sum-over-states.
     """
 
-    def __init__(self, gamma, dt, q_grid, wfs, energies, max_steps=None):
+    def __init__(self, gamma, dt, q_grid, wf_q_grid, wfs, energies, max_steps=None):
         """
         Parameters:
           gamma: Coherent state width (1/nm^2).
           dt: Time step (ps).
           q_grid: Evenly spaced grid of position points (nm).
-          wfs: Lowest-energy wavefunctions evaluated on the position grid.
+          wf_q_grid: Evenly spaced grid of position points for the wavefunction
+                     (nm).
+          wfs: Lowest-energy wavefunctions evaluated on wf_q_grid.
           energies: Energies corresponding to wfs (kJ/mol).
           max_steps: Number of steps after which to terminate.
         """
 
         assert len(q_grid) > 1, 'More than one position grid point required.'
-        assert wfs.shape[1] == len(q_grid), 'Wavefunctions are not on position grid.'
+        assert len(wf_q_grid) > 1, 'More than one position grid point required.'
+        assert wfs.shape[1] == len(wf_q_grid), 'Wavefunctions are not on position grid.'
 
         # Normalize the wavefunctions the way we require (with the square root
         # of the volume element included in the wavefunction).
@@ -43,21 +46,23 @@ class _SurvivalAmplitude(_SAHK):
         self._gamma = gamma # 1/nm^2
         self._dt = dt # ps
         self._q_grid = q_grid # nm
+        self._wf_q_grid = wf_q_grid # nm
         self._energies = energies # kJ/mol
         self._max_steps = max_steps
 
         dq = self._q_grid[1] - self._q_grid[0] # nm
+        wf_dq = self._wf_q_grid[1] - self._wf_q_grid[0] # nm
         self._p_grid = self._q_grid * N.pi * HBAR / (self._q_grid[-1] * dq) # g nm/ps mol
         dp = self._p_grid[1] - self._p_grid[0] # g nm/ps mol
 
         self._t = 0. # ps
         self._cur_step = 0
 
-        # Two fewer dqs than there are position grid integrations due to the
+        # Two fewer wf_dqs than there are position grid integrations due to the
         # normalization of wfs.
-        self._C = dp * dq * dq * N.sqrt(self._gamma / N.pi) / (2. * N.pi * HBAR) # 1
+        self._C = dp * dq * wf_dq * N.sqrt(self._gamma / N.pi) / (2. * N.pi * HBAR) # 1
 
-        self._init(len(self._p_grid), len(self._q_grid))
+        self._init(len(self._p_grid), len(self._q_grid), len(self._wf_q_grid))
 
         self._mesh_ps, self._mesh_qs = meshgrid(self._p_grid, self._q_grid)
         self._transformed_wf0 = self._transform_wf(self._t).conj() # 1
@@ -74,7 +79,7 @@ class _SurvivalAmplitude(_SAHK):
         result = N.zeros(N.broadcast(self._mesh_ps, self._mesh_qs).shape, dtype=complex) # 1
 
         for n, phase in enumerate(phases):
-            for q_alpha, wf_n_alpha in zip(self._q_grid, self._wfs[n]):
+            for q_alpha, wf_n_alpha in zip(self._wf_q_grid, self._wfs[n]):
                 qdiff = q_alpha - self._mesh_qs # nm
                 prefactor = phase * wf_n_alpha * N.exp(-self._gamma / 2. * qdiff * qdiff + 1j / HBAR * self._mesh_ps * qdiff)
 
@@ -104,16 +109,17 @@ class _SurvivalAmplitude(_SAHK):
         return result
 
 class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
-    def _init(self, pn, qn):
-        super()._init(pn, qn)
+    def _init(self, pn, qn, wf_qn):
+        super()._init(pn, qn, wf_qn)
 
         self._p_grid_gpu = gpuarray.to_gpu(N.ascontiguousarray(self._p_grid))
         self._q_grid_gpu = gpuarray.to_gpu(N.ascontiguousarray(self._q_grid))
+        self._wf_q_grid_gpu = gpuarray.to_gpu(N.ascontiguousarray(self._wf_q_grid))
         self._wfs_gpu = gpuarray.to_gpu(N.ascontiguousarray(self._wfs))
         self._energies_gpu = gpuarray.to_gpu(N.ascontiguousarray(self._energies))
 
         mod = SourceModule("""
-            __global__ void transform(double *p_grid, double *q_grid, double *wfs, double *energies, double t, double *out_real, double *out_imag) {{
+            __global__ void transform(double *p_grid, double *q_grid, double *wf_q_grid, double *wfs, double *energies, double t, double *out_real, double *out_imag) {{
                 int idx_x = threadIdx.x + blockIdx.x * blockDim.x;
                 int idx_y = threadIdx.y + blockIdx.y * blockDim.y;
                 int idx = idx_x + idx_y * {qn};
@@ -123,13 +129,13 @@ class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
                     return;
 
                 for (int n = 0; n < {wfn}; n++) {{
-                    for (int alpha = 0; alpha < {qn}; alpha++) {{
-                        qdiff = q_grid[alpha] - q_grid[idx_x];
+                    for (int alpha = 0; alpha < {wf_qn}; alpha++) {{
+                        qdiff = wf_q_grid[alpha] - q_grid[idx_x];
                         prefactor1 = wfs[alpha + n * {qn}] * exp({g} * qdiff * qdiff);
                         sincos({h} * (p_grid[idx_y] * qdiff - energies[n] * t), &s, &c);
 
-                        for (int j = 0; j < {qn}; j++) {{
-                            prefactor2 = prefactor1 * wfs[j] * wfs[j + n * {qn}];
+                        for (int j = 0; j < {wf_qn}; j++) {{
+                            prefactor2 = prefactor1 * wfs[j] * wfs[j + n * {wf_qn}];
 
                             out_real[idx] += prefactor2 * c;
                             out_imag[idx] += prefactor2 * s;
@@ -137,9 +143,9 @@ class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
                     }}
                 }}
             }}
-        """.format(g=-0.5*self._gamma, h=1./HBAR, wfn=len(self._wfs), pn=pn, qn=qn))
+        """.format(g=-0.5*self._gamma, h=1./HBAR, wfn=len(self._wfs), pn=pn, qn=qn, wf_qn=wf_qn))
         self._kernel = mod.get_function('transform')
-        self._kernel.prepare('PPPPdPP')
+        self._kernel.prepare('PPPPPdPP')
 
         self._gpu_grid, self._gpu_block = carve_array(qn, pn)
 
@@ -150,6 +156,7 @@ class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
         self._kernel.prepared_call(self._gpu_grid, self._gpu_block,
                 self._p_grid_gpu.gpudata,
                 self._q_grid_gpu.gpudata,
+                self._wf_q_grid_gpu.gpudata,
                 self._wfs_gpu.gpudata,
                 self._energies_gpu.gpudata,
                 t,

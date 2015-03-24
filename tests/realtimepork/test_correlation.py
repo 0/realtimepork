@@ -21,11 +21,12 @@ class SurvivalAmplitudeTest(TestCase):
         # Very short time.
         dt = 0.001 * N.pi / hp['omega'] # ps
         num_steps = 51
-        qs = N.linspace(-110., 110., 75) # nm
+        qs = N.linspace(-110., 110., 67) # nm
+        wf_qs = N.linspace(-110., 110., 37) # nm
         # Exact (unnormalized) harmonic oscillator wavefunction.
-        wf = N.exp(-hp['mass'] * hp['omega'] * qs * qs / (2. * HBAR))
+        wf = N.exp(-hp['mass'] * hp['omega'] * wf_qs * wf_qs / (2. * HBAR))
 
-        sa_gen = SurvivalAmplitude(hp['gamma'], hp['mass'], dt, ho_fs, qs, wf, max_steps=num_steps)
+        sa_gen = SurvivalAmplitude(hp['gamma'], hp['mass'], dt, ho_fs, qs, wf_qs, wf, max_steps=num_steps)
         ts = N.empty(num_steps) # ps
         sas = N.empty(num_steps, dtype=complex) # 1
 

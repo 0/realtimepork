@@ -21,6 +21,8 @@ p_config = p.add_argument_group('configuration')
 p_config.add_argument('--mass', metavar='M', type=float, required=True, help='particle mass (electron masses)')
 p_config.add_argument('--omega', metavar='W', type=float, required=True, help='angular frequency (K)')
 p_config.add_argument('--gamma', metavar='G', type=float, required=True, help='coherent state width (1/nm^2)')
+p_config.add_argument('--q-max', metavar='Q', type=float, help='range of position grid (nm) (default: same as wavefunction)')
+p_config.add_argument('--qn', metavar='N', type=float, help='number of position grid points (default: same as wavefunction)')
 p_config.add_argument('--dt', metavar='T', type=float, required=True, help='spacing of time grid (ps)')
 p_config.add_argument('--steps', metavar='N', type=int, required=True, help='number of real-time steps')
 p_config.add_argument('--wf-in', metavar='FILE', required=True, help='path to wavefunction')
@@ -33,6 +35,12 @@ p.add_argument('--sas-plot-out', metavar='FILE', help='path to output survival a
 p.add_argument('--sas-spectrum-out', metavar='FILE', help='path to output spectrum plot')
 
 args = p.parse_args()
+
+if len([x for x in [args.q_max, args.qn] if x is not None]) not in [0, 2]:
+    from sys import exit
+
+    print('Both --q-max and --qn must be given.')
+    exit(1)
 
 
 # Import now that we know whether to use the GPU.
@@ -56,6 +64,8 @@ from realtimepork.spectrum import find_peak, interpolate, transform
 mass = args.mass * ME # g/mol
 omega = args.omega * KB / HBAR # 1/ps
 gamma = args.gamma # 1/nm^2
+q_max = args.q_max # nm
+qn = args.qn # 1
 dt = args.dt # ps
 steps = args.steps # 1
 wf_in = args.wf_in
@@ -69,10 +79,15 @@ sas_spectrum_out = args.sas_spectrum_out
 ho_fs = harmonic(m=mass, omega=omega)
 
 wf_in_data = N.loadtxt(wf_in)
-qs = wf_in_data[:,0] # nm
+wf_qs = wf_in_data[:,0] # nm
 wf = wf_in_data[:,1]
 
-sa_gen = SurvivalAmplitude(gamma, mass, dt, ho_fs, qs, wf, max_steps=steps)
+if q_max is None:
+    qs = wf_qs
+else:
+    qs = N.linspace(-q_max, q_max, qn) # nm
+
+sa_gen = SurvivalAmplitude(gamma, mass, dt, ho_fs, qs, wf_qs, wf, max_steps=steps)
 ts = N.empty(steps)
 sas = N.empty(steps, dtype=complex)
 
