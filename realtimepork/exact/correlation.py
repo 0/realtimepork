@@ -41,31 +41,31 @@ class _SurvivalAmplitude(_SAHK):
 
         # Normalize the wavefunctions the way we require (with the square root
         # of the volume element included in the wavefunction).
-        self._wfs = (wfs.T / N.sqrt(N.sum(wfs * wfs, axis=1))).T # 1
+        self._wfs = (wfs.T / N.sqrt(N.sum(wfs * wfs, axis=1))).T  # 1
 
-        self._gamma = gamma # 1/nm^2
-        self._dt = dt # ps
-        self._q_grid = q_grid # nm
-        self._wf_q_grid = wf_q_grid # nm
-        self._energies = energies # kJ/mol
+        self._gamma = gamma  # 1/nm^2
+        self._dt = dt  # ps
+        self._q_grid = q_grid  # nm
+        self._wf_q_grid = wf_q_grid  # nm
+        self._energies = energies  # kJ/mol
         self._max_steps = max_steps
 
-        dq = self._q_grid[1] - self._q_grid[0] # nm
-        wf_dq = self._wf_q_grid[1] - self._wf_q_grid[0] # nm
-        self._p_grid = self._q_grid * N.pi * HBAR / (self._q_grid[-1] * dq) # g nm/ps mol
-        dp = self._p_grid[1] - self._p_grid[0] # g nm/ps mol
+        dq = self._q_grid[1] - self._q_grid[0]  # nm
+        wf_dq = self._wf_q_grid[1] - self._wf_q_grid[0]  # nm
+        self._p_grid = self._q_grid * N.pi * HBAR / (self._q_grid[-1] * dq)  # g nm/ps mol
+        dp = self._p_grid[1] - self._p_grid[0]  # g nm/ps mol
 
-        self._t = 0. # ps
+        self._t = 0.  # ps
         self._cur_step = 0
 
         # Two fewer wf_dqs than there are position grid integrations due to the
         # normalization of wfs.
-        self._C = dp * dq * wf_dq * N.sqrt(self._gamma / N.pi) / (2. * N.pi * HBAR) # 1
+        self._C = dp * dq * wf_dq * N.sqrt(self._gamma / N.pi) / (2. * N.pi * HBAR)  # 1
 
         self._init(len(self._p_grid), len(self._q_grid), len(self._wf_q_grid))
 
         self._mesh_ps, self._mesh_qs = meshgrid(self._p_grid, self._q_grid)
-        self._transformed_wf0 = self._transform_wf(self._t).conj() # 1
+        self._transformed_wf0 = self._transform_wf(self._t).conj()  # 1
 
     def _transform_wf(self, t):
         """
@@ -75,12 +75,12 @@ class _SurvivalAmplitude(_SAHK):
           t: Time (ps).
         """
 
-        phases = N.exp(-1j / HBAR * self._energies * t) # 1
-        result = N.zeros(N.broadcast(self._mesh_ps, self._mesh_qs).shape, dtype=complex) # 1
+        phases = N.exp(-1j / HBAR * self._energies * t)  # 1
+        result = N.zeros(N.broadcast(self._mesh_ps, self._mesh_qs).shape, dtype=complex)  # 1
 
         for n, phase in enumerate(phases):
             for q_alpha, wf_n_alpha in zip(self._wf_q_grid, self._wfs[n]):
-                qdiff = q_alpha - self._mesh_qs # nm
+                qdiff = q_alpha - self._mesh_qs  # nm
                 prefactor = phase * wf_n_alpha * N.exp(-self._gamma / 2. * qdiff * qdiff + 1j / HBAR * self._mesh_ps * qdiff)
 
                 for wf_0_j, wf_n_j in zip(self._wfs[0], self._wfs[n]):
@@ -94,7 +94,7 @@ class _SurvivalAmplitude(_SAHK):
 
         self._cur_step += 1
 
-        transformed_wf = self._transform_wf(self._t) # 1
+        transformed_wf = self._transform_wf(self._t)  # 1
 
         # Perform the final integrals over p and q.
         sa = self._C * N.sum(transformed_wf * self._transformed_wf0)
@@ -107,6 +107,7 @@ class _SurvivalAmplitude(_SAHK):
         self._t += self._dt
 
         return result
+
 
 class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
     def _init(self, pn, qn, wf_qn):
@@ -143,7 +144,7 @@ class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
                     }}
                 }}
             }}
-        """.format(g=-0.5*self._gamma, h=1./HBAR, wfn=len(self._wfs), pn=pn, qn=qn, wf_qn=wf_qn))
+        """.format(g=-0.5 * self._gamma, h=1. / HBAR, wfn=len(self._wfs), pn=pn, qn=qn, wf_qn=wf_qn))
         self._kernel = mod.get_function('transform')
         self._kernel.prepare('PPPPPdPP')
 
@@ -154,17 +155,18 @@ class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
         result_imag_gpu = gpuarray.zeros_like(result_real_gpu)
 
         self._kernel.prepared_call(self._gpu_grid, self._gpu_block,
-                self._p_grid_gpu.gpudata,
-                self._q_grid_gpu.gpudata,
-                self._wf_q_grid_gpu.gpudata,
-                self._wfs_gpu.gpudata,
-                self._energies_gpu.gpudata,
-                t,
-                result_real_gpu.gpudata,
-                result_imag_gpu.gpudata,
-                )
+                                   self._p_grid_gpu.gpudata,
+                                   self._q_grid_gpu.gpudata,
+                                   self._wf_q_grid_gpu.gpudata,
+                                   self._wfs_gpu.gpudata,
+                                   self._energies_gpu.gpudata,
+                                   t,
+                                   result_real_gpu.gpudata,
+                                   result_imag_gpu.gpudata,
+                                   )
 
         return result_real_gpu.get() + 1j * result_imag_gpu.get()
+
 
 if gpu.is_enabled():
     SurvivalAmplitude = _SurvivalAmplitudeGPU

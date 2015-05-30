@@ -80,7 +80,7 @@ def interpolate(xs, freqs, amps, freq_window, factor):
       last values have to be those from the original transform.
     """
 
-    assert freqs[0] <= freq_window[0] , 'Invalid frequency window: {}, {}.'.format(freqs[0], freq_window[0])
+    assert freqs[0] <= freq_window[0], 'Invalid frequency window: {}, {}.'.format(freqs[0], freq_window[0])
     assert freq_window[0] < freq_window[1], 'Invalid frequency window: {}, {}.'.format(freq_window[0], freq_window[1])
     assert freq_window[1] <= freqs[-1], 'Invalid frequency window: {}, {}.'.format(freq_window[1], freqs[-1])
 

@@ -39,9 +39,9 @@ def harmonic(k=None, m=None, omega=None):
     """
 
     if k is not None:
-        force_constant = k # kJ/nm^2 mol
+        force_constant = k  # kJ/nm^2 mol
     elif m is not None and omega is not None:
-        force_constant = m * omega * omega # kJ/nm^2 mol
+        force_constant = m * omega * omega  # kJ/nm^2 mol
     else:
         assert False, 'Must provide either k or (m and omega).'
 
@@ -69,12 +69,12 @@ def quartic(a, b, c):
     """
 
     def potential_f(q) -> 'kJ/mol':
-        q2 = q * q # nm^2
+        q2 = q * q  # nm^2
 
         return (a + b * q + c * q2) * q2
 
     def force_f(q) -> 'kJ/nm mol':
-        q2 = q * q # nm^2
+        q2 = q * q  # nm^2
 
         return (-2. * a - 3. * b * q - 4. * c * q2) * q
 
@@ -93,12 +93,12 @@ def double_well(depth, width):
       width: Distance of minima from zero (nm).
     """
 
-    w2 = width * width # nm^2
-    a = -2. * depth / w2 # kJ/nm^2 mol
-    b = depth / (w2 * w2) # kJ/nm^4 mol
+    w2 = width * width  # nm^2
+    a = -2. * depth / w2  # kJ/nm^2 mol
+    b = depth / (w2 * w2)  # kJ/nm^4 mol
 
     def potential_f(q) -> 'kJ/mol':
-        q2 = q * q # nm^2
+        q2 = q * q  # nm^2
 
         return (a + b * q2) * q2
 

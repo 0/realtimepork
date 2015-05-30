@@ -29,7 +29,7 @@ class SignedSqrtTest(TestCase):
         Make sure we don't trigger the flip over the positive real line.
         """
         traj, _ = self._gen_traj(3)
-        traj = traj[:,N.newaxis]
+        traj = traj[:, N.newaxis]
         ss = SignedSqrt()
         rooted1 = N.empty_like(traj)
         rooted2 = signed_sqrt(traj)
@@ -46,8 +46,8 @@ class SignedSqrtTest(TestCase):
         """
 
         traj, factors = self._gen_traj(3)
-        traj = traj[:,N.newaxis]
-        factors = factors[:,N.newaxis]
+        traj = traj[:, N.newaxis]
+        factors = factors[:, N.newaxis]
         # Reflect the trajectory over the y-axis.
         traj = -traj.conj()
         ss = SignedSqrt()
@@ -66,7 +66,7 @@ class SignedSqrtTest(TestCase):
         """
 
         ts = N.linspace(0., 4. * N.pi, 401)
-        traj = (N.cos(ts) + 1j * N.sin(ts))[:,N.newaxis]
+        traj = (N.cos(ts) + 1j * N.sin(ts))[:, N.newaxis]
         ss = SignedSqrt()
         rooted1 = N.empty_like(traj)
         rooted2 = signed_sqrt(traj)
@@ -74,7 +74,7 @@ class SignedSqrtTest(TestCase):
         for i, v in enumerate(traj):
             rooted1[i] = ss(v)
 
-        factors = N.concatenate((N.ones(101), -N.ones(200), N.ones(100)))[:,N.newaxis]
+        factors = N.concatenate((N.ones(101), -N.ones(200), N.ones(100)))[:, N.newaxis]
         # The trigonometric functions will probably not give us exactly zero,
         # so tweak things a bit at the crossings to account for implementation
         # details.

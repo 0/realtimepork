@@ -61,13 +61,13 @@ from realtimepork.potentials import harmonic
 from realtimepork.spectrum import find_peak, interpolate, transform
 
 
-mass = args.mass * ME # g/mol
-omega = args.omega * KB / HBAR # 1/ps
-gamma = args.gamma # 1/nm^2
-q_max = args.q_max # nm
-qn = args.qn # 1
-dt = args.dt # ps
-steps = args.steps # 1
+mass = args.mass * ME  # g/mol
+omega = args.omega * KB / HBAR  # 1/ps
+gamma = args.gamma  # 1/nm^2
+q_max = args.q_max  # nm
+qn = args.qn  # 1
+dt = args.dt  # ps
+steps = args.steps  # 1
 wf_in = args.wf_in
 
 sas_out = args.sas_out
@@ -79,13 +79,13 @@ sas_spectrum_out = args.sas_spectrum_out
 ho_fs = harmonic(m=mass, omega=omega)
 
 wf_in_data = N.loadtxt(wf_in)
-wf_qs = wf_in_data[:,0] # nm
-wf = wf_in_data[:,1]
+wf_qs = wf_in_data[:, 0]  # nm
+wf = wf_in_data[:, 1]
 
 if q_max is None:
     qs = wf_qs
 else:
-    qs = N.linspace(-q_max, q_max, qn) # nm
+    qs = N.linspace(-q_max, q_max, qn)  # nm
 
 sa_gen = SurvivalAmplitude(gamma, mass, dt, ho_fs, qs, wf_qs, wf, max_steps=steps)
 ts = N.empty(steps)
@@ -101,11 +101,11 @@ for i, (t, amp) in enumerate(sa_gen):
 
 
 # Obtain the spectrum.
-freqs, amps = transform(ts, sas) # 1/ps, 1
-freqs *= 2. * N.pi * HBAR / KB # K
+freqs, amps = transform(ts, sas)  # 1/ps, 1
+freqs *= 2. * N.pi * HBAR / KB  # K
 peak_idx, _ = find_peak(freqs, amps)
 freq_window = freqs[peak_idx - 3], freqs[peak_idx + 4]
-freqs_interp, amps_interp = interpolate(sas, freqs, amps, freq_window, 64) # K, 1
+freqs_interp, amps_interp = interpolate(sas, freqs, amps, freq_window, 64)  # K, 1
 
 print('Peak at {} K.'.format(find_peak(freqs_interp, amps_interp)[1]))
 
@@ -119,4 +119,6 @@ if sas_plot_out:
 if sas_spectrum_out:
     from realtimepork.plotting import plot_spectrum
 
-    plot_spectrum(freqs_interp, amps_interp, sas_spectrum_out, magnitude=True, freq_window=freq_window, x_label='$\omega / \mathrm{K}$', y_label='$I(\omega)$')
+    plot_spectrum(freqs_interp, amps_interp, sas_spectrum_out, magnitude=True,
+                  freq_window=freq_window,
+                  x_label='$\omega / \mathrm{K}$', y_label='$I(\omega)$')

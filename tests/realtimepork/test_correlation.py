@@ -19,16 +19,16 @@ class SurvivalAmplitudeTest(TestCase):
         ho_fs = harmonic(m=hp['mass'], omega=hp['omega'])
 
         # Very short time.
-        dt = 0.001 * N.pi / hp['omega'] # ps
+        dt = 0.001 * N.pi / hp['omega']  # ps
         num_steps = 51
-        qs = N.linspace(-110., 110., 67) # nm
-        wf_qs = N.linspace(-110., 110., 37) # nm
+        qs = N.linspace(-110., 110., 67)  # nm
+        wf_qs = N.linspace(-110., 110., 37)  # nm
         # Exact (unnormalized) harmonic oscillator wavefunction.
         wf = N.exp(-hp['mass'] * hp['omega'] * wf_qs * wf_qs / (2. * HBAR))
 
         sa_gen = SurvivalAmplitude(hp['gamma'], hp['mass'], dt, ho_fs, qs, wf_qs, wf, max_steps=num_steps)
-        ts = N.empty(num_steps) # ps
-        sas = N.empty(num_steps, dtype=complex) # 1
+        ts = N.empty(num_steps)  # ps
+        sas = N.empty(num_steps, dtype=complex)  # 1
 
         for i, (t, amp) in enumerate(sa_gen):
             ts[i] = t

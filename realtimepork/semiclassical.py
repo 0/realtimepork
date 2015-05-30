@@ -119,7 +119,7 @@ class HermanKlukPrefactor:
               step (nm).
         """
 
-        hessians = self._hessian_f(qs) # kJ/nm^2 mol
+        hessians = self._hessian_f(qs)  # kJ/nm^2 mol
 
         Mpp, Mqp = self._integrator_p.step(hessians)
         Mpq, Mqq = self._integrator_q.step(hessians)

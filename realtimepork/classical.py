@@ -41,7 +41,7 @@ class ClassicalIntegrator:
         self._qs = init_qs + N.zeros_like(init_ps)
 
         self._cur_step = 0
-        self._t = 0.0 # ps
+        self._t = 0.0  # ps
 
     @property
     def t(self) -> 'ps':
@@ -106,30 +106,30 @@ class RuthForest(ClassicalIntegrator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        x = (N.power(2, 1./3.) + N.power(2, -1./3.) - 1.) / 6.
+        x = (N.power(2, 1. / 3.) + N.power(2, -1. / 3.) - 1.) / 6.
         self._d1 = self._d4 = self._dt * (x + 0.5)
         self._c2 = self._c4 = self._dt * (2. * x + 1) / self._mass
         self._d2 = self._d3 = self._dt * (-x)
-        self._c3            = self._dt * (-4. * x - 1) / self._mass
+        self._c3 = self._dt * (-4. * x - 1) / self._mass
 
-        self._last_fs = None # kJ/nm mol
+        self._last_fs = None  # kJ/nm mol
 
     def _step(self):
-        dt = self._dt # ps
+        dt = self._dt  # ps
 
         if self._last_fs is not None:
             # Don't recalculate it.
-            last_fs = self._last_fs # kJ/nm mol
+            last_fs = self._last_fs  # kJ/nm mol
         else:
-            last_fs = self._force_f(self._qs) # kJ/nm mol
+            last_fs = self._force_f(self._qs)  # kJ/nm mol
 
-        self._ps += self._d1 * last_fs # g nm/ps mol
-        self._qs += self._c2 * self._ps # nm
+        self._ps += self._d1 * last_fs  # g nm/ps mol
+        self._qs += self._c2 * self._ps  # nm
         self._ps += self._d2 * self._force_f(self._qs)
         self._qs += self._c3 * self._ps
         self._ps += self._d3 * self._force_f(self._qs)
         self._qs += self._c4 * self._ps
-        fs = self._force_f(self._qs) # kJ/nm mol
+        fs = self._force_f(self._qs)  # kJ/nm mol
         self._ps += self._d4 * fs
 
         self._last_fs = fs
@@ -150,10 +150,10 @@ class RungeKutta4(ClassicalIntegrator):
     """
 
     def _step(self):
-        dt = self._dt # ps
+        dt = self._dt  # ps
 
-        dps1 = dt * self._force_f(self._t, self._qs) # g nm/ps mol
-        dqs1 = dt * self._ps / self._mass # nm
+        dps1 = dt * self._force_f(self._t, self._qs)  # g nm/ps mol
+        dqs1 = dt * self._ps / self._mass  # nm
         dps2 = dt * self._force_f(self._t + 0.5 * dt, self._qs + 0.5 * dqs1)
         dqs2 = dt * (self._ps + 0.5 * dps1) / self._mass
         dps3 = dt * self._force_f(self._t + 0.5 * dt, self._qs + 0.5 * dqs2)
@@ -187,7 +187,7 @@ class TrajectoryAction:
         self._dt = dt
 
         self._Hs = init_ps * init_ps / (2. * self._mass) + potential_f(init_qs)
-        self._Ss = N.zeros(N.broadcast(init_ps, init_qs).shape) # kJ ps/mol
+        self._Ss = N.zeros(N.broadcast(init_ps, init_qs).shape)  # kJ ps/mol
 
     @property
     def Ss(self) -> 'kJ ps/mol':

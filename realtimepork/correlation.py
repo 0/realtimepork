@@ -52,28 +52,28 @@ class _SurvivalAmplitude:
 
         # Normalize the wavefunction the way we require (with the square root
         # of the volume element included in the wavefunction).
-        self._wf = wf / N.sqrt(N.sum(wf * wf)) # 1
+        self._wf = wf / N.sqrt(N.sum(wf * wf))  # 1
 
-        self._gamma = gamma # 1/nm^2
-        self._wf_q_grid = wf_q_grid # nm
+        self._gamma = gamma  # 1/nm^2
+        self._wf_q_grid = wf_q_grid  # nm
         self._max_steps = max_steps
 
-        dq = q_grid[1] - q_grid[0] # nm
-        wf_dq = self._wf_q_grid[1] - self._wf_q_grid[0] # nm
-        p_grid = 0.5 * q_grid * N.pi * HBAR / (q_grid[-1] * dq) # g nm/ps mol
-        dp = p_grid[1] - p_grid[0] # g nm/ps mol
+        dq = q_grid[1] - q_grid[0]  # nm
+        wf_dq = self._wf_q_grid[1] - self._wf_q_grid[0]  # nm
+        p_grid = 0.5 * q_grid * N.pi * HBAR / (q_grid[-1] * dq)  # g nm/ps mol
+        dp = p_grid[1] - p_grid[0]  # g nm/ps mol
 
         self._cur_step = 0
 
         # One fewer wf_dq than there are position grid integrations due to the
         # normalization of wf.
-        self._C = dp * dq * wf_dq * N.sqrt(self._gamma / N.pi) / (2. * N.pi * HBAR) # 1
+        self._C = dp * dq * wf_dq * N.sqrt(self._gamma / N.pi) / (2. * N.pi * HBAR)  # 1
 
         self._init(len(p_grid), len(q_grid), len(self._wf_q_grid))
 
         mesh_ps, mesh_qs = meshgrid(p_grid, q_grid, sparse=False)
         self._trajs = SemiclassicalTrajectory(self._gamma, mass, dt, potential_fs, mesh_ps, mesh_qs)
-        self._transformed_wf0 = self._transform_wf(mesh_ps, mesh_qs).conj() # 1
+        self._transformed_wf0 = self._transform_wf(mesh_ps, mesh_qs).conj()  # 1
 
     def _init(self, pn, qn, wf_qn):
         pass
@@ -87,10 +87,10 @@ class _SurvivalAmplitude:
           qs: Position grid (nm).
         """
 
-        result = N.zeros(N.broadcast(ps, qs).shape, dtype=complex) # 1
+        result = N.zeros(N.broadcast(ps, qs).shape, dtype=complex)  # 1
 
         for q_j, wf_j in zip(self._wf_q_grid, self._wf):
-            qdiff = q_j - qs # nm
+            qdiff = q_j - qs  # nm
             result += N.exp(-0.5 * self._gamma * qdiff * qdiff + 1j / HBAR * ps * qdiff) * wf_j
 
         return result
@@ -105,8 +105,8 @@ class _SurvivalAmplitude:
         self._cur_step += 1
 
         t, ps, qs, Rs, Ss = next(self._trajs)
-        consts = Rs * N.exp(1j / HBAR * Ss) # 1
-        transformed_wf = self._transform_wf(ps, qs) # 1
+        consts = Rs * N.exp(1j / HBAR * Ss)  # 1
+        transformed_wf = self._transform_wf(ps, qs)  # 1
 
         # Perform the final integrals over p and q.
         sa = self._C * N.sum(consts * transformed_wf * self._transformed_wf0)
@@ -115,6 +115,7 @@ class _SurvivalAmplitude:
             raise ThresholdExceededError(t, sa)
 
         return t, sa
+
 
 class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
     def _init(self, pn, qn, wf_qn):
@@ -142,7 +143,7 @@ class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
                     out_imag[idx] += prefactor * s;
                 }}
             }}
-        """.format(g=-0.5*self._gamma, h=1./HBAR, pn=pn, qn=qn, wf_qn=wf_qn))
+        """.format(g=-0.5 * self._gamma, h=1. / HBAR, pn=pn, qn=qn, wf_qn=wf_qn))
         self._kernel = mod.get_function('transform')
         self._kernel.prepare('PPPPPP')
 
@@ -153,15 +154,16 @@ class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
         result_imag_gpu = gpuarray.zeros_like(result_real_gpu)
 
         self._kernel.prepared_call(self._gpu_grid, self._gpu_block,
-                gpuarray.to_gpu(N.ascontiguousarray(ps)).gpudata,
-                gpuarray.to_gpu(N.ascontiguousarray(qs)).gpudata,
-                self._wf_q_grid_gpu.gpudata,
-                self._wf_gpu.gpudata,
-                result_real_gpu.gpudata,
-                result_imag_gpu.gpudata,
-                )
+                                   gpuarray.to_gpu(N.ascontiguousarray(ps)).gpudata,
+                                   gpuarray.to_gpu(N.ascontiguousarray(qs)).gpudata,
+                                   self._wf_q_grid_gpu.gpudata,
+                                   self._wf_gpu.gpudata,
+                                   result_real_gpu.gpudata,
+                                   result_imag_gpu.gpudata,
+                                   )
 
         return result_real_gpu.get() + 1j * result_imag_gpu.get()
+
 
 if gpu.is_enabled():
     SurvivalAmplitude = _SurvivalAmplitudeGPU

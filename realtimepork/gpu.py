@@ -22,6 +22,7 @@ _enabled = False
 class PyCUDAMissingError(Exception):
     pass
 
+
 def _require_pycuda(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -48,12 +49,14 @@ def enable():
 
     _enabled = True
 
+
 def is_enabled():
     """
     Check whether the GPU is available and initialized.
     """
 
     return _enabled
+
 
 @_require_pycuda
 def carve_array(xn, yn):
