@@ -2,7 +2,7 @@
 Semiclassical IVR using the Herman-Kluk propagator.
 """
 
-import numpy as N
+import numpy as np
 
 from .classical import RuthForest, TrajectoryAction
 from .constants import HBAR
@@ -106,8 +106,8 @@ class HermanKlukPrefactor:
         self._ss = SignedSqrt()
 
         # The stability matrix is initially the identity matrix.
-        self._integrator_p = RungeKutta4HermanKluk(mass, dt, N.ones(shape), N.zeros(shape))
-        self._integrator_q = RungeKutta4HermanKluk(mass, dt, N.zeros(shape), N.ones(shape))
+        self._integrator_p = RungeKutta4HermanKluk(mass, dt, np.ones(shape), np.zeros(shape))
+        self._integrator_q = RungeKutta4HermanKluk(mass, dt, np.zeros(shape), np.ones(shape))
 
     def step(self, qs) -> '1':
         """
@@ -153,7 +153,7 @@ class SemiclassicalTrajectory:
         self._max_steps = max_steps
 
         potential_f, force_f, hessian_f = potential_fs
-        shape = N.broadcast(init_ps, init_qs).shape
+        shape = np.broadcast(init_ps, init_qs).shape
 
         # We need the half-step information from the classical integrator, so
         # we will have to step it twice for each "real" step.
@@ -164,7 +164,7 @@ class SemiclassicalTrajectory:
         self._cur_step = 0
 
         # Hold the positions for hand-off to the HermanKlukPrefactor.
-        self._q_container = N.empty((3,) + shape)
+        self._q_container = np.empty((3,) + shape)
 
     def __iter__(self) -> 'SemiclassicalTrajectory':
         return self

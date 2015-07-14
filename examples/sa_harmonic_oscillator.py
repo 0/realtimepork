@@ -11,7 +11,7 @@ states.
 
 from argparse import ArgumentParser, FileType
 
-import numpy as N
+import numpy as np
 
 
 # Parse arguments.
@@ -78,18 +78,18 @@ sas_spectrum_out = args.sas_spectrum_out
 # Calculate values.
 ho_fs = harmonic(m=mass, omega=omega)
 
-wf_in_data = N.loadtxt(wf_in)
+wf_in_data = np.loadtxt(wf_in)
 wf_qs = wf_in_data[:, 0]  # nm
 wf = wf_in_data[:, 1]
 
 if q_max is None:
     qs = wf_qs
 else:
-    qs = N.linspace(-q_max, q_max, qn)  # nm
+    qs = np.linspace(-q_max, q_max, qn)  # nm
 
 sa_gen = SurvivalAmplitude(gamma, mass, dt, ho_fs, qs, wf_qs, wf, max_steps=steps)
-ts = N.empty(steps)
-sas = N.empty(steps, dtype=complex)
+ts = np.empty(steps)
+sas = np.empty(steps, dtype=complex)
 
 for i, (t, amp) in enumerate(sa_gen):
     ts[i] = t
@@ -102,7 +102,7 @@ for i, (t, amp) in enumerate(sa_gen):
 
 # Obtain the spectrum.
 freqs, amps = transform(ts, sas)  # 1/ps, 1
-freqs *= 2. * N.pi * HBAR / KB  # K
+freqs *= 2. * np.pi * HBAR / KB  # K
 peak_idx, _ = find_peak(freqs, amps)
 freq_window = freqs[peak_idx - 3], freqs[peak_idx + 4]
 freqs_interp, amps_interp = interpolate(sas, freqs, amps, freq_window, 64)  # K, 1

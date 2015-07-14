@@ -8,7 +8,7 @@ if gpu.is_enabled():
     from pycuda.compiler import SourceModule
     from pycuda import gpuarray
 
-import numpy as N
+import numpy as np
 
 from .constants import HBAR
 from .gpu import carve_array
@@ -52,7 +52,7 @@ class _SurvivalAmplitude:
 
         # Normalize the wavefunction the way we require (with the square root
         # of the volume element included in the wavefunction).
-        self._wf = wf / N.sqrt(N.sum(wf * wf))  # 1
+        self._wf = wf / np.sqrt(np.sum(wf * wf))  # 1
 
         self._gamma = gamma  # 1/nm^2
         self._wf_q_grid = wf_q_grid  # nm
@@ -60,14 +60,14 @@ class _SurvivalAmplitude:
 
         dq = q_grid[1] - q_grid[0]  # nm
         wf_dq = self._wf_q_grid[1] - self._wf_q_grid[0]  # nm
-        p_grid = 0.5 * q_grid * N.pi * HBAR / (q_grid[-1] * dq)  # g nm/ps mol
+        p_grid = 0.5 * q_grid * np.pi * HBAR / (q_grid[-1] * dq)  # g nm/ps mol
         dp = p_grid[1] - p_grid[0]  # g nm/ps mol
 
         self._cur_step = 0
 
         # One fewer wf_dq than there are position grid integrations due to the
         # normalization of wf.
-        self._C = dp * dq * wf_dq * N.sqrt(self._gamma / N.pi) / (2. * N.pi * HBAR)  # 1
+        self._C = dp * dq * wf_dq * np.sqrt(self._gamma / np.pi) / (2. * np.pi * HBAR)  # 1
 
         self._init(len(p_grid), len(q_grid), len(self._wf_q_grid))
 
@@ -87,11 +87,11 @@ class _SurvivalAmplitude:
           qs: Position grid (nm).
         """
 
-        result = N.zeros(N.broadcast(ps, qs).shape, dtype=complex)  # 1
+        result = np.zeros(np.broadcast(ps, qs).shape, dtype=complex)  # 1
 
         for q_j, wf_j in zip(self._wf_q_grid, self._wf):
             qdiff = q_j - qs  # nm
-            result += N.exp(-0.5 * self._gamma * qdiff * qdiff + 1j / HBAR * ps * qdiff) * wf_j
+            result += np.exp(-0.5 * self._gamma * qdiff * qdiff + 1j / HBAR * ps * qdiff) * wf_j
 
         return result
 
@@ -105,11 +105,11 @@ class _SurvivalAmplitude:
         self._cur_step += 1
 
         t, ps, qs, Rs, Ss = next(self._trajs)
-        consts = Rs * N.exp(1j / HBAR * Ss)  # 1
+        consts = Rs * np.exp(1j / HBAR * Ss)  # 1
         transformed_wf = self._transform_wf(ps, qs)  # 1
 
         # Perform the final integrals over p and q.
-        sa = self._C * N.sum(consts * transformed_wf * self._transformed_wf0)
+        sa = self._C * np.sum(consts * transformed_wf * self._transformed_wf0)
 
         if abs(sa) >= self.ABORT_THRESHOLD:
             raise ThresholdExceededError(t, sa)
@@ -121,8 +121,8 @@ class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
     def _init(self, pn, qn, wf_qn):
         super()._init(pn, qn, wf_qn)
 
-        self._wf_q_grid_gpu = gpuarray.to_gpu(N.ascontiguousarray(self._wf_q_grid))
-        self._wf_gpu = gpuarray.to_gpu(N.ascontiguousarray(self._wf))
+        self._wf_q_grid_gpu = gpuarray.to_gpu(np.ascontiguousarray(self._wf_q_grid))
+        self._wf_gpu = gpuarray.to_gpu(np.ascontiguousarray(self._wf))
 
         mod = SourceModule("""
             __global__ void transform(double *ps, double *qs, double *wf_q_grid, double *wf, double *out_real, double *out_imag) {{
@@ -150,12 +150,12 @@ class _SurvivalAmplitudeGPU(_SurvivalAmplitude):
         self._gpu_grid, self._gpu_block = carve_array(qn, pn)
 
     def _transform_wf(self, ps, qs):
-        result_real_gpu = gpuarray.zeros(N.broadcast(ps, qs).shape, N.double)
+        result_real_gpu = gpuarray.zeros(np.broadcast(ps, qs).shape, np.double)
         result_imag_gpu = gpuarray.zeros_like(result_real_gpu)
 
         self._kernel.prepared_call(self._gpu_grid, self._gpu_block,
-                                   gpuarray.to_gpu(N.ascontiguousarray(ps)).gpudata,
-                                   gpuarray.to_gpu(N.ascontiguousarray(qs)).gpudata,
+                                   gpuarray.to_gpu(np.ascontiguousarray(ps)).gpudata,
+                                   gpuarray.to_gpu(np.ascontiguousarray(qs)).gpudata,
                                    self._wf_q_grid_gpu.gpudata,
                                    self._wf_gpu.gpudata,
                                    result_real_gpu.gpudata,

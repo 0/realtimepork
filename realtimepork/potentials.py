@@ -2,7 +2,7 @@
 Example potential functions.
 """
 
-import numpy as N
+import numpy as np
 
 
 def free_particle():
@@ -53,7 +53,7 @@ def harmonic(k=None, m=None, omega=None):
 
     def hessian_f(q) -> 'kJ/nm^2 mol':
         # Keep the shape of the input.
-        return force_constant * N.ones_like(q)
+        return force_constant * np.ones_like(q)
 
     return potential_f, force_f, hessian_f
 

@@ -2,7 +2,7 @@
 Generation of classical trajectories.
 """
 
-import numpy as N
+import numpy as np
 
 
 class ClassicalIntegrator:
@@ -37,8 +37,8 @@ class ClassicalIntegrator:
         self._max_steps = max_steps
 
         # Expand into the full shape if necessary.
-        self._ps = init_ps + N.zeros_like(init_qs)
-        self._qs = init_qs + N.zeros_like(init_ps)
+        self._ps = init_ps + np.zeros_like(init_qs)
+        self._qs = init_qs + np.zeros_like(init_ps)
 
         self._cur_step = 0
         self._t = 0.0  # ps
@@ -106,7 +106,7 @@ class RuthForest(ClassicalIntegrator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        x = (N.power(2, 1. / 3.) + N.power(2, -1. / 3.) - 1.) / 6.
+        x = (np.power(2, 1. / 3.) + np.power(2, -1. / 3.) - 1.) / 6.
         self._d1 = self._d4 = self._dt * (x + 0.5)
         self._c2 = self._c4 = self._dt * (2. * x + 1) / self._mass
         self._d2 = self._d3 = self._dt * (-x)
@@ -187,7 +187,7 @@ class TrajectoryAction:
         self._dt = dt
 
         self._Hs = init_ps * init_ps / (2. * self._mass) + potential_f(init_qs)
-        self._Ss = N.zeros(N.broadcast(init_ps, init_qs).shape)  # kJ ps/mol
+        self._Ss = np.zeros(np.broadcast(init_ps, init_qs).shape)  # kJ ps/mol
 
     @property
     def Ss(self) -> 'kJ ps/mol':

@@ -1,6 +1,6 @@
 from unittest import main, TestCase
 
-import numpy as N
+import numpy as np
 from numpy.testing import assert_array_almost_equal
 
 from realtimepork.classical import RungeKutta4, RuthForest, TrajectoryAction
@@ -16,17 +16,17 @@ class ClassicalIntegratorTest:
         Make sure the integrators can handle a harmonic oscillator.
         """
 
-        ps = N.linspace(-hp['init_p_max'], hp['init_p_max'], 7)  # g nm/ps mol
-        qs = N.linspace(-hp['init_q_max'], hp['init_q_max'], 11)  # nm
+        ps = np.linspace(-hp['init_p_max'], hp['init_p_max'], 7)  # g nm/ps mol
+        qs = np.linspace(-hp['init_q_max'], hp['init_q_max'], 11)  # nm
         init_ps, init_qs = meshgrid(ps, qs)
 
-        ts = N.linspace(0., 3. * N.pi / hp['omega'], self.num_steps)  # ps
+        ts = np.linspace(0., 3. * np.pi / hp['omega'], self.num_steps)  # ps
         dt = ts[1] - ts[0]  # ps
 
         integrator = self._initialize_integrator(hp['mass'], hp['omega'], dt, init_ps, init_qs)
 
-        calculated_ps = N.empty((len(ts), len(ps), len(qs)))  # g nm/ps mol
-        calculated_qs = N.empty_like(calculated_ps)  # nm
+        calculated_ps = np.empty((len(ts), len(ps), len(qs)))  # g nm/ps mol
+        calculated_qs = np.empty_like(calculated_ps)  # nm
 
         for i, step in enumerate(integrator):
             _, calculated_ps[i], calculated_qs[i] = step
@@ -95,19 +95,19 @@ class TrajectoryActionTest(TestCase):
         Check the action for a harmonic oscillator.
         """
 
-        ps = N.linspace(-hp['init_p_max'], hp['init_p_max'], 7)  # g nm/ps mol
-        qs = N.linspace(-hp['init_q_max'], hp['init_q_max'], 11)  # nm
+        ps = np.linspace(-hp['init_p_max'], hp['init_p_max'], 7)  # g nm/ps mol
+        qs = np.linspace(-hp['init_q_max'], hp['init_q_max'], 11)  # nm
         init_ps, init_qs = meshgrid(ps, qs)
 
         potential_f, force_f, _ = harmonic(m=hp['mass'], omega=hp['omega'])
 
-        ts = N.linspace(0., 4. * N.pi / hp['omega'], 10000)  # ps
+        ts = np.linspace(0., 4. * np.pi / hp['omega'], 10000)  # ps
         dt = ts[1] - ts[0]  # ps
 
         integrator = RuthForest(hp['mass'], 0.5 * dt, force_f, init_ps, init_qs, max_steps=2 * len(ts))
         action = TrajectoryAction(hp['mass'], dt, potential_f, init_ps, init_qs)
 
-        calculated_Ss = N.empty((len(ts), len(ps), len(qs)))  # kJ ps/mol
+        calculated_Ss = np.empty((len(ts), len(ps), len(qs)))  # kJ ps/mol
 
         for i, (_, step2) in enumerate(zip(integrator, integrator)):
             _, ps, _ = step2

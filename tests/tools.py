@@ -2,7 +2,7 @@
 Tools for testing.
 """
 
-import numpy as N
+import numpy as np
 
 from realtimepork.constants import KB, ME, HBAR
 from realtimepork.tools import meshgrid, signed_sqrt
@@ -32,10 +32,10 @@ def harmonic_hk(mass, omega, gamma, ts, shape) -> '1':
 
     x = mass * omega / (HBAR * gamma)  # 1
 
-    result = signed_sqrt(N.cos(omega * ts) - 0.5j * (x + 1. / x) * N.sin(omega * ts))
+    result = signed_sqrt(np.cos(omega * ts) - 0.5j * (x + 1. / x) * np.sin(omega * ts))
     # The result is independent of initial conditions for a harmonic oscillator.
     result.resize((len(result), 1, 1))
-    return N.tile(result, shape)
+    return np.tile(result, shape)
 
 
 def harmonic_trajectory(mass, omega, gamma, ts, init_ps, init_qs) -> '(g nm/ps mol, nm, 1, kJ ps/mol)':
@@ -56,10 +56,10 @@ def harmonic_trajectory(mass, omega, gamma, ts, init_ps, init_qs) -> '(g nm/ps m
     """
 
     mesh_ts, mesh_ps, mesh_qs = meshgrid(ts, init_ps, init_qs)
-    shape = N.broadcast(init_ps, init_qs).shape
+    shape = np.broadcast(init_ps, init_qs).shape
 
-    c = N.cos(omega * mesh_ts)
-    s = N.sin(omega * mesh_ts)
+    c = np.cos(omega * mesh_ts)
+    s = np.sin(omega * mesh_ts)
 
     ps = mesh_ps * c - mass * omega * mesh_qs * s  # g nm/ps mol
     qs = mesh_ps * s / (mass * omega) + mesh_qs * c  # nm

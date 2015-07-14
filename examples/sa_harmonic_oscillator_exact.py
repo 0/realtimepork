@@ -7,7 +7,7 @@ propagator.
 
 from argparse import ArgumentParser, FileType
 
-import numpy as N
+import numpy as np
 
 
 # Parse arguments.
@@ -69,19 +69,19 @@ sas_spectrum_out = args.sas_spectrum_out
 
 
 # Calculate values.
-wfs_in_data = N.loadtxt(wfs_in)
+wfs_in_data = np.loadtxt(wfs_in)
 wf_qs = wfs_in_data[:, 0]  # nm
 wfs = wfs_in_data[:, 1:].T
-energies = N.loadtxt(energies_in, ndmin=1) * KB  # kJ/mol
+energies = np.loadtxt(energies_in, ndmin=1) * KB  # kJ/mol
 
 if q_max is None:
     qs = wf_qs
 else:
-    qs = N.linspace(-q_max, q_max, qn)  # nm
+    qs = np.linspace(-q_max, q_max, qn)  # nm
 
 sa_gen = SurvivalAmplitude(gamma, dt, qs, wf_qs, wfs, energies, max_steps=steps)
-ts = N.empty(steps)
-sas = N.empty(steps, dtype=complex)
+ts = np.empty(steps)
+sas = np.empty(steps, dtype=complex)
 
 for i, (t, amp) in enumerate(sa_gen):
     ts[i] = t
@@ -94,7 +94,7 @@ for i, (t, amp) in enumerate(sa_gen):
 
 # Obtain the spectrum.
 freqs, amps = transform(ts, sas)  # 1/ps, 1
-freqs *= 2. * N.pi * HBAR / KB  # K
+freqs *= 2. * np.pi * HBAR / KB  # K
 peak_idx, _ = find_peak(freqs, amps)
 freq_window = freqs[peak_idx - 3], freqs[peak_idx + 4]
 freqs_interp, amps_interp = interpolate(sas, freqs, amps, freq_window, 64)  # K, 1

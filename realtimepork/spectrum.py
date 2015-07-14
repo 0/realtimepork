@@ -2,7 +2,7 @@
 Spectral analysis.
 """
 
-import numpy as N
+import numpy as np
 
 
 def transform(ts, xs):
@@ -25,9 +25,9 @@ def transform(ts, xs):
     except:
         raise Exception('At least two time points required.')
 
-    freqs = N.fft.fftshift(N.fft.fftfreq(len(xs), d=dt))
+    freqs = np.fft.fftshift(np.fft.fftfreq(len(xs), d=dt))
     # We use the inverse transform here to get the sign convention we need.
-    spectrum = N.fft.fftshift(N.fft.ifft(xs))
+    spectrum = np.fft.fftshift(np.fft.ifft(xs))
 
     return freqs, spectrum
 
@@ -44,7 +44,7 @@ def find_peak(freqs, amps):
       Index and frequency of tallest peak.
     """
 
-    idx = N.argmax(abs(amps))
+    idx = np.argmax(abs(amps))
 
     return idx, freqs[idx]
 
@@ -85,17 +85,17 @@ def interpolate(xs, freqs, amps, freq_window, factor):
     assert freq_window[1] <= freqs[-1], 'Invalid frequency window: {}, {}.'.format(freq_window[1], freqs[-1])
 
     # Indices such that we bound freq_window as closely as possible.
-    idx_min, idx_max = N.argmax(freqs > freq_window[0]) - 1, N.argmin(freqs < freq_window[1])
+    idx_min, idx_max = np.argmax(freqs > freq_window[0]) - 1, np.argmin(freqs < freq_window[1])
     # Indices before which we insert the new elements.
-    idxs = N.repeat(N.arange(idx_min, idx_max) + 1, factor - 1)
+    idxs = np.repeat(np.arange(idx_min, idx_max) + 1, factor - 1)
 
     # Values to be inserted.
-    new_freqs = freqs[idxs - 1] + N.tile(N.arange(factor - 1) + 1, idx_max - idx_min) * (freqs[idxs] - freqs[idxs - 1]) / factor
-    new_amps = N.empty_like(new_freqs, dtype=complex)
+    new_freqs = freqs[idxs - 1] + np.tile(np.arange(factor - 1) + 1, idx_max - idx_min) * (freqs[idxs] - freqs[idxs - 1]) / factor
+    new_amps = np.empty_like(new_freqs, dtype=complex)
 
     for i, freq in enumerate(new_freqs):
         # Find the fractional frequency index, taking into account the fftshift.
         k = (len(xs) - 1) * (freq - freqs[0]) / (freqs[-1] - freqs[0]) - len(xs) // 2
-        new_amps[i] = sum(xs * N.exp(2j * N.pi * k * N.arange(len(xs)) / len(xs))) / len(xs)
+        new_amps[i] = sum(xs * np.exp(2j * np.pi * k * np.arange(len(xs)) / len(xs))) / len(xs)
 
-    return N.insert(freqs, idxs, new_freqs), N.insert(amps, idxs, new_amps)
+    return np.insert(freqs, idxs, new_freqs), np.insert(amps, idxs, new_amps)
