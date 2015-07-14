@@ -26,6 +26,7 @@ p_config.add_argument('--qn', metavar='N', type=int, help='number of position gr
 p_config.add_argument('--dt', metavar='T', type=float, required=True, help='spacing of time grid (ps)')
 p_config.add_argument('--steps', metavar='N', type=int, required=True, help='number of real-time steps')
 p_config.add_argument('--wf-in', metavar='FILE', required=True, help='path to wavefunction')
+p_config.add_argument('--p-sigma', metavar='S', type=float, help='standard deviation of momentum smoothing (g nm/ps mol; default: none)')
 
 p.add_argument('--gpu', dest='gpu', action='store_true', help='use the GPU')
 p.add_argument('--no-gpu', dest='gpu', action='store_false', help="don't use the GPU (default)")
@@ -69,6 +70,7 @@ qn = args.qn  # 1
 dt = args.dt  # ps
 steps = args.steps  # 1
 wf_in = args.wf_in
+p_sigma = args.p_sigma  # g nm/ps mol
 
 sas_out = args.sas_out
 sas_plot_out = args.sas_plot_out
@@ -87,7 +89,7 @@ if q_max is None:
 else:
     qs = np.linspace(-q_max, q_max, qn)  # nm
 
-sa_gen = SurvivalAmplitude(gamma, mass, dt, ho_fs, qs, wf_qs, wf, max_steps=steps)
+sa_gen = SurvivalAmplitude(gamma, mass, dt, ho_fs, qs, wf_qs, wf, max_steps=steps, p_sigma=p_sigma)
 ts = np.empty(steps)
 sas = np.empty(steps, dtype=complex)
 

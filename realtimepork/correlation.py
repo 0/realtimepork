@@ -31,7 +31,7 @@ class _SurvivalAmplitude:
     # sense whatsoever in carrying on.
     ABORT_THRESHOLD = 5.
 
-    def __init__(self, gamma, mass, dt, potential_fs, q_grid, wf_q_grid, wf, max_steps=None):
+    def __init__(self, gamma, mass, dt, potential_fs, q_grid, wf_q_grid, wf, max_steps=None, p_sigma=None):
         """
         Parameters:
           gamma: Coherent state width (1/nm^2).
@@ -44,6 +44,7 @@ class _SurvivalAmplitude:
                      (nm).
           wf: Ground state wavefunction evaluated on wf_q_grid.
           max_steps: Number of steps after which to terminate.
+          p_sigma: Standard deviation of momentum smoothing (g nm/ps mol).
         """
 
         assert len(q_grid) > 1, 'More than one position grid point required.'
@@ -74,6 +75,12 @@ class _SurvivalAmplitude:
         mesh_ps, mesh_qs = meshgrid(p_grid, q_grid, sparse=False)
         self._trajs = SemiclassicalTrajectory(self._gamma, mass, dt, potential_fs, mesh_ps, mesh_qs)
         self._transformed_wf0 = self._transform_wf(mesh_ps, mesh_qs).conj()  # 1
+
+        if p_sigma is not None:
+            var = p_sigma * p_sigma
+            self._p_smoothing = np.exp(-0.5 * p_grid * p_grid / var)
+        else:
+            self._p_smoothing = np.ones_like(p_grid)
 
     def _init(self, pn, qn, wf_qn):
         pass
@@ -109,7 +116,7 @@ class _SurvivalAmplitude:
         transformed_wf = self._transform_wf(ps, qs)  # 1
 
         # Perform the final integrals over p and q.
-        sa = self._C * np.sum(consts * transformed_wf * self._transformed_wf0)
+        sa = self._C * np.sum(self._p_smoothing * np.sum(consts * transformed_wf * self._transformed_wf0, axis=1))
 
         if abs(sa) >= self.ABORT_THRESHOLD:
             raise ThresholdExceededError(t, sa)
