@@ -16,7 +16,7 @@ p_config = p.add_argument_group('configuration')
 
 p_config.add_argument('--gamma', metavar='G', type=float, required=True, help='coherent state width (1/nm^2)')
 p_config.add_argument('--q-max', metavar='Q', type=float, help='range of position grid (nm) (default: same as wavefunction)')
-p_config.add_argument('--qn', metavar='N', type=float, help='number of position grid points (default: same as wavefunction)')
+p_config.add_argument('--qn', metavar='N', type=int, help='number of position grid points (default: same as wavefunction)')
 p_config.add_argument('--dt', metavar='T', type=float, required=True, help='spacing of time grid (ps)')
 p_config.add_argument('--steps', metavar='N', type=int, required=True, help='number of real-time steps')
 p_config.add_argument('--wfs-in', metavar='FILE', required=True, help='path to wavefunctions')
