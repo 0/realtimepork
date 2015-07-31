@@ -20,7 +20,7 @@ class SurvivalAmplitudeTest(TestCase):
         dt = 12.34 * np.pi / hp['omega']  # ps
         num_steps = 3
         qs = np.linspace(-95., 95., 31)  # nm
-        wf_qs = np.linspace(-85., 85., 29)  # nm
+        wf_qs = np.linspace(-93., 93., 29)  # nm
         # Exact (unnormalized) harmonic oscillator wavefunctions.
         wfn = 3
         herms = np.polynomial.hermite.hermval(np.sqrt(hp['mass'] * hp['omega'] / HBAR) * wf_qs, np.eye(wfn))

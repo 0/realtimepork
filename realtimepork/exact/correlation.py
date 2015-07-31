@@ -52,7 +52,8 @@ class _SurvivalAmplitude(_SAHK):
 
         dq = self._q_grid[1] - self._q_grid[0]  # nm
         wf_dq = self._wf_q_grid[1] - self._wf_q_grid[0]  # nm
-        self._p_grid = self._q_grid * np.pi * HBAR / (self._q_grid[-1] * dq)  # g nm/ps mol
+        p_max = np.pi * HBAR / wf_dq  # g nm/ps mol
+        self._p_grid = np.linspace(-p_max, p_max, len(self._wf_q_grid))  # g nm/ps mol
         dp = self._p_grid[1] - self._p_grid[0]  # g nm/ps mol
 
         self._t = 0.  # ps

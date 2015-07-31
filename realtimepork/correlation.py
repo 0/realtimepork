@@ -61,7 +61,8 @@ class _SurvivalAmplitude:
 
         dq = q_grid[1] - q_grid[0]  # nm
         wf_dq = self._wf_q_grid[1] - self._wf_q_grid[0]  # nm
-        p_grid = 0.5 * q_grid * np.pi * HBAR / (q_grid[-1] * dq)  # g nm/ps mol
+        p_max = np.pi * HBAR / wf_dq  # g nm/ps mol
+        p_grid = np.linspace(-p_max, p_max, len(self._wf_q_grid))  # g nm/ps mol
         dp = p_grid[1] - p_grid[0]  # g nm/ps mol
 
         self._cur_step = 0

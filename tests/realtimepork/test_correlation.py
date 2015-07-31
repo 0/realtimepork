@@ -21,7 +21,7 @@ class SurvivalAmplitudeTest(TestCase):
         # Very short time.
         dt = 0.001 * np.pi / hp['omega']  # ps
         num_steps = 51
-        qs = np.linspace(-110., 110., 67)  # nm
+        qs = np.linspace(-110., 110., 11)  # nm
         wf_qs = np.linspace(-110., 110., 37)  # nm
         # Exact (unnormalized) harmonic oscillator wavefunction.
         wf = np.exp(-hp['mass'] * hp['omega'] * wf_qs * wf_qs / (2. * HBAR))
